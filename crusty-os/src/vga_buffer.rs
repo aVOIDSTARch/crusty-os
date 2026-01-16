@@ -1,6 +1,7 @@
 // in src/vga_buffer.rs
 
 use volatile::Volatile;
+use core::fmt;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -91,7 +92,7 @@ impl Writer {
         }
     }
 
-     fn new_line(&mut self) {
+    fn new_line(&mut self) {
         for row in 1..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
                 let character = self.buffer.chars[row][col].read();
@@ -102,7 +103,7 @@ impl Writer {
         self.column_position = 0;
     }
 
-        fn clear_row(&mut self, row: usize) {
+    fn clear_row(&mut self, row: usize) {
         let blank = ScreenChar {
             ascii_character: b' ',
             color_code: self.color_code,
@@ -111,11 +112,9 @@ impl Writer {
             self.buffer.chars[row][col].write(blank);
         }
     }
-  }
+}
 
 // implement the core::fmt::Write trait for Writer
-use core::fmt;
-
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_string(s);
@@ -123,28 +122,12 @@ impl fmt::Write for Writer {
     }
 }
 
-
-
-// a function to demonstrate writing to the VGA buffer
-pub fn print_something() {
-    use core::fmt::Write;
-    let mut writer = Writer {
-        column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    };
-
-    writer.write_byte(b'H');
-    writer.write_string("ello! ");
-    write!(writer, "The numbers are {} and {}", 42, 1.0/3.0).unwrap();
-}
-
 // Provide a public interface to write formatted strings to the VGA buffer
 use lazy_static::lazy_static;
 use spin::Mutex;
 
 lazy_static! {
-     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
@@ -166,6 +149,5 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
 }
